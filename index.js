@@ -27,7 +27,6 @@ function compile(id, str) {
 
 function process(source) {
   return (
-    'var twig = require(\'twig\').twig;\n' +
     'module.exports = ' + source + ';\n'
   );
 }
