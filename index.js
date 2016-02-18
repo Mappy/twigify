@@ -2,33 +2,51 @@
 
 var twig    = require('twig').twig;
 var through = require('through2');
-var minify  = require('html-minifier').minify;
-
+var isExist = false;
 var ext = /\.(twig)$/;
 
-var minifyDefaults = {
-  removeComments: true,
-  collapseWhitespace: true
-};
-
 function compile(id, str) {
-  var minified = minify(str, minifyDefaults);
-
   var template = twig({
-    id: id,
-    data: minified
+    ref: id
   });
+
+  var minified = minifyTwig(str.toString());
+  if (!template) {
+    template = twig({
+      id: id,
+      data: minified
+    });
+  }
 
   var tokens = JSON.stringify(template.tokens);
 
+  var refName = getRefName(id);
+
   // the id will be the filename and path relative to the require()ing module
-  return 'twig({ id: __filename,  data:' + tokens + ', precompiled: true, allowInlineIncludes: true })';
+  return {
+      src: 'twig({ id: "' + refName + '", data:' + tokens + ', precompiled: true, allowInlineIncludes: true })',
+      dependencies: getDepencies(str, refName)
+  };
 }
 
+function getDepencies (str, refName) {
+    var includes = getPath(str);
+
+    var pathDepth = refName.split('/').length;
+    return includes.map(function(include) {
+        var ret = '';
+        for (var i = 1; i < pathDepth; i++) {
+            ret += '../';
+        }
+        return ret + include;
+    });
+}
 function process(source) {
-  return (
-    'module.exports = ' + source + ';\n'
-  );
+    var str = source.dependencies.map(function (depency) {
+        return 'require("' + depency + '");\n';
+    }).join(" ");
+
+  return str + 'module.exports = ' + source.src + ';\n';
 }
 
 function twigify(file, opts) {
@@ -61,6 +79,24 @@ function twigify(file, opts) {
   }
 
   return through(push, end);
+}
+
+function getRefName(path) {
+    var refName = path;
+    var match =  getPath(path);
+    if (match) {
+        refName = match[0];
+    }
+
+    return refName;
+}
+
+function getPath(str) {
+    return str.match(/(FastBundle\/.*\/?.+\.twig)/g) || [];
+}
+
+function minifyTwig(str) {
+    return str.replace(/\n/g, '');
 }
 
 module.exports = twigify;
