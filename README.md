@@ -36,8 +36,7 @@ In `templates/main.twig`:
 
 In `main.js`:
 ```js
-// need to require() this so that it is available for main.twig
-var bodyTemplate = require('./templates/body.twig');
+// you don'tneed to require() body.twig; it will be automatically required when being built.
 var mainTemplate = require('./templates/main.twig');
 
 var page = mainTemplate.render({
