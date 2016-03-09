@@ -5,8 +5,10 @@
 var twig = require('twig').twig;
 var through = require('through2');
 var minify = require('html-minifier').minify;
+var path = require('path');
 
-var ext = /\.(twig)$/;
+var extension = /\.(twig)$/;
+var templatesDir;
 
 var minifyDefaults = {
     removeComments: true,
@@ -17,14 +19,14 @@ function compile(id, str) {
     var minified = minify(str, minifyDefaults);
 
     var template = twig({
-        id: id,
+        id: templatesDir ? path.relative(path.resolve(templatesDir), id.replace(/^\//, '')) : id,
         data: minified
     });
 
     var tokens = JSON.stringify(template.tokens);
 
     // the id will be the filename and path relative to the require()ing module
-    return 'twig({ id: __filename,  data:' + tokens + ', precompiled: true, allowInlineIncludes: true })';
+    return 'twig({ id: "' + template.id + '",  data:' + tokens + ', precompiled: true, allowInlineIncludes: true })';
 }
 
 function _process(source, deps) {
@@ -32,7 +34,7 @@ function _process(source, deps) {
 
     if (deps instanceof Array) {
         deps.forEach(function (dep) {
-            out.push('require("' + dep + '");\n');
+            out.push('require("' + dep.replace(/^\//, '') + '");\n');
         });
     }
 
@@ -42,12 +44,12 @@ function _process(source, deps) {
 }
 
 function twigify(file, opts) {
-    if (!ext.test(file)) return through();
+    if (!extension.test(file)) return through();
     if (!opts) opts = {};
 
     var id = file;
     // @TODO: pass a path via CLI to use for relative file paths
-    //opts.path ? file.replace(opts.path, '') : file;
+    // opts.path ? file.replace(opts.path, '') : file;
 
     var buffers = [];
 
@@ -84,7 +86,11 @@ function twigify(file, opts) {
 
 function configure(options) {
     if (options.extension) {
-        ext = options.extension;
+        extension = options.extension;
+    }
+
+    if (options.templatesDir) {
+        templatesDir = options.templatesDir;
     }
 
     return twigify;
@@ -93,3 +99,4 @@ function configure(options) {
 module.exports = twigify;
 module.exports.compile = compile;
 module.exports.configure = configure;
+
