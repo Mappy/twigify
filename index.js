@@ -92,7 +92,7 @@ function getRefName(path) {
 }
 
 function getPath(str) {
-    return str.match(/(FastBundle\/.*\/?.+\.twig)/g) || [];
+    return str.match(/(views\/.*\/?.+\.twig)/g) || [];
 }
 
 function minifyTwig(str) {
