@@ -12,7 +12,8 @@ var templatesDir;
 
 var minifyDefaults = {
     removeComments: true,
-    collapseWhitespace: true
+    collapseWhitespace: true,
+    ignoreCustomFragments: [ /\{%[\s\S]*?%\}/, /\{\{[\s\S]*?\}\}/ ]
 };
 
 function compile(id, str) {
