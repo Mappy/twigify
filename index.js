@@ -19,14 +19,12 @@ function compile(id, str) {
     var minified = minify(str, minifyDefaults);
 
     var template = twig({
-        id: templatesDir ? path.relative(path.resolve(templatesDir), id.replace(/^\//, '')) : id,
+        id: templatesDir ? path.relative(path.resolve(templatesDir), id) : id,
         data: minified
     });
 
-    var tokens = JSON.stringify(template.tokens);
-
     // the id will be the filename and path relative to the require()ing module
-    return 'twig({ id: "' + template.id + '",  data:' + tokens + ', precompiled: true, allowInlineIncludes: true })';
+    return 'twig({ id: "./' + template.id + '",  data:' + JSON.stringify(template.tokens) + ', precompiled: true, allowInlineIncludes: true })';
 }
 
 function _process(source, deps) {
@@ -34,7 +32,7 @@ function _process(source, deps) {
 
     if (deps instanceof Array) {
         deps.forEach(function (dep) {
-            out.push('require("' + dep.replace(/^\//, '') + '");\n');
+            out.push('require("./' + dep + '");\n');
         });
     }
 
