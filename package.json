@@ -22,7 +22,7 @@
     "url": "git://github.com/dane-harnett/twigify.git"
   },
   "dependencies": {
-    "html-minifier": "^0.6.9",
+    "html-minifier": "^3.4.3",
     "through2": "^0.6.3",
     "twig": "^0.8.9"
   },
