@@ -24,7 +24,7 @@
   "dependencies": {
     "html-minifier": "^0.6.9",
     "through2": "^0.6.3",
-    "twig": "^0.7.2"
+    "twig": "^0.8.9"
   },
   "devDependencies": {},
   "engines": {
