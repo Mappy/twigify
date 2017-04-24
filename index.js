@@ -2,13 +2,12 @@
 
 'use strict';
 
-var twig = require('twig').twig;
+var twig    = require('twig').twig;
 var through = require('through2');
-var minify = require('html-minifier').minify;
-var path = require('path');
+var minify  = require('html-minifier').minify;
+var path    = require('path');
 
 var extension = /\.(twig)$/;
-var templatesDir;
 
 var minifyDefaults = {
     removeComments: true,
@@ -16,24 +15,35 @@ var minifyDefaults = {
     ignoreCustomFragments: [ /\{%[\s\S]*?%\}/, /\{\{[\s\S]*?\}\}/ ]
 };
 
-function compile(id, str) {
-    var minified = minify(str, minifyDefaults);
+function replaceIncludePath (p, str) {
+    var depRe = /\{%\s*(?:extends|include)\s*(['"])(.+?)\1/g;
+    var m;
 
+    while (m = depRe.exec(str)) {
+        const replaceValue = path.resolve(path.dirname(path.resolve(p)), m[2]);
+        str = str.replace(m[2], replaceValue);
+    }
+
+    return str;
+}
+
+function compile (id, str) {
     var template = twig({
-        id: templatesDir ? path.relative(path.resolve(templatesDir), id) : id,
-        data: minified
+        id: id,
+        data: replaceIncludePath(id, minify(str, minifyDefaults))
     });
 
     // the id will be the filename and path relative to the require()ing module
-    return 'twig({ id: "./' + template.id + '",  data:' + JSON.stringify(template.tokens) + ', precompiled: true, allowInlineIncludes: true })';
+    return `twig({id: '${id}', data:${JSON.stringify(template.tokens)}, allowInlineIncludes: true, precompiled: true})`;
 }
 
-function _process(source, deps) {
+function _process (source, deps, id) {
     var out = ['var twig = require(\'twig\').twig;\n'];
 
     if (deps instanceof Array) {
         deps.forEach(function (dep) {
-            out.push('require("./' + dep + '");\n');
+            var u = path.resolve(path.dirname(path.resolve(id)), dep);
+            out.push('require("' + u + '");\n');
         });
     }
 
@@ -42,7 +52,7 @@ function _process(source, deps) {
     return out.join('');
 }
 
-function twigify(file, opts) {
+function twigify (file, opts) {
     if (!extension.test(file)) return through();
     if (!opts) opts = {};
 
@@ -52,16 +62,16 @@ function twigify(file, opts) {
 
     var buffers = [];
 
-    function push(chunk, enc, next) {
+    function push (chunk, enc, next) {
         buffers.push(chunk);
         next();
     }
 
-    function end(next) {
+    function end (next) {
         var str = Buffer.concat(buffers).toString();
 
         var depRe = /\{%\s*(?:extends|include)\s*(['"])(.+?)\1/g;
-        var deps = [];
+        var deps  = [];
         var m;
 
         while (m = depRe.exec(str)) {
@@ -76,26 +86,13 @@ function twigify(file, opts) {
             return this.emit('error', e);
         }
 
-        this.push(_process(compiledTwig, deps));
+        this.push(_process(compiledTwig, deps, id));
         next();
     }
 
     return through(push, end);
 }
 
-function configure(options) {
-    if (options.extension) {
-        extension = options.extension;
-    }
-
-    if (options.templatesDir) {
-        templatesDir = options.templatesDir;
-    }
-
-    return twigify;
-}
-
-module.exports = twigify;
+module.exports         = twigify;
 module.exports.compile = compile;
-module.exports.configure = configure;
 
