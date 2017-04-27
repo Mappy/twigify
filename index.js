@@ -8,6 +8,7 @@ var minify  = require('html-minifier').minify;
 var path    = require('path');
 
 var extension = /\.(twig)$/;
+var ids = {};
 
 var minifyDefaults = {
     removeComments: true,
@@ -66,25 +67,28 @@ function twigify (file, opts) {
     }
 
     function end (next) {
-        var str = Buffer.concat(buffers).toString();
+        if (!ids[id]) {
+            var str = Buffer.concat(buffers).toString();
 
-        var depRe = /\{%\s*(?:extends|include)\s*(['"])(.+?)\1/g;
-        var deps  = [];
-        var m;
+            var depRe = /\{%\s*(?:extends|include)\s*(['"])(.+?)\1/g;
+            var deps  = [];
+            var m;
 
-        while (m = depRe.exec(str)) {
-            deps.push(m[2]);
+            while (m = depRe.exec(str)) {
+                deps.push(m[2]);
+            }
+
+            var compiledTwig;
+
+            try {
+                compiledTwig = compile(id, str);
+                ids[id] = true;
+            } catch (e) {
+                return this.emit('error', e);
+            }
+
+            this.push(_process(compiledTwig, deps, id));
         }
-
-        var compiledTwig;
-
-        try {
-            compiledTwig = compile(id, str);
-        } catch (e) {
-            return this.emit('error', e);
-        }
-
-        this.push(_process(compiledTwig, deps, id));
         next();
     }
 
