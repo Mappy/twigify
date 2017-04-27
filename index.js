@@ -57,8 +57,6 @@ function twigify (file, opts) {
     if (!opts) opts = {};
 
     var id = file;
-    // @TODO: pass a path via CLI to use for relative file paths
-    // opts.path ? file.replace(opts.path, '') : file;
 
     var buffers = [];
 
